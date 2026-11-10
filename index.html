@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>COGU · 거래 수수료 페이백</title>
+<meta name="description" content="COGU 추천 코드로 가입하고 거래소 수수료를 매일 돌려받으세요.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+:root{
+  --bg:#0B0D0C; --surface:#141715; --sunk:#1B1F1C; --ink:#EEF2EC; --muted:#8E978F; --line:#272C28;
+  --lime:#C6F135; --lime-ink:#0B0D0C; --acc:#C6F135; --hot:#FF6B3D; --up:#3DDC97;
+  --f-disp:"Black Han Sans","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-body:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-num:"JetBrains Mono","Noto Sans KR",ui-monospace,monospace;
+  --wrap:1200px; color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --bg:#F3F4EF; --surface:#FFFFFF; --sunk:#EBEDE5; --ink:#111311; --muted:#5C635C; --line:#DADED3;
+  --acc:#4A7300; --up:#0E8A57; color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:6px}
+.wrap{max-width:var(--wrap);margin:0 auto;padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.tag{font-family:var(--f-num);font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--acc)}
+h1,h2,h3{font-family:var(--f-disp);font-weight:400;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:clamp(28px,3.6vw,40px);line-height:1.15;margin-top:8px}
+.sec{padding-block:72px}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+.sec-head p{margin:8px 0 0;color:var(--muted);max-width:58ch}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:700;font-size:14px;padding:11px 18px;border-radius:12px;text-decoration:none;border:1px solid transparent;cursor:pointer;white-space:nowrap}
+.btn-lime{background:var(--lime);color:var(--lime-ink)}
+.btn-lime:hover{filter:brightness(1.06)}
+.btn-line{background:transparent;border-color:var(--line);color:var(--ink)}
+.btn-line:hover{border-color:var(--muted)}
+
+/* header */
+header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:24px;height:64px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-mark{width:34px;height:34px;border-radius:9px;background:var(--lime);color:var(--lime-ink);display:grid;place-items:center;font-family:var(--f-disp);font-size:20px;transform:rotate(-6deg)}
+.logo-word{font-family:var(--f-disp);font-size:24px;letter-spacing:.04em}
+.menu{display:flex;gap:2px}
+.menu a{text-decoration:none;font-size:14px;font-weight:500;color:var(--muted);padding:8px 11px;border-radius:9px}
+.menu a:hover{color:var(--ink);background:var(--sunk)}
+.nav-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.icon-btn{width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer}
+#menuBtn{display:none}
+.mmenu{display:none;padding-block:6px 12px}
+.mmenu a{display:block;padding:12px 2px;text-decoration:none;font-weight:500;border-bottom:1px solid var(--line)}
+@media (max-width:960px){.menu,.nav-r .btn{display:none}#menuBtn{display:grid}.mmenu.open{display:block}}
+
+/* ticker */
+.ticker{overflow:hidden;border-bottom:1px solid var(--line);background:var(--surface)}
+.ticker-in{display:flex;gap:44px;width:max-content;padding-block:10px;animation:roll 40s linear infinite;font-size:13px}
+.ticker-in span{white-space:nowrap;color:var(--muted)}
+.ticker-in b{font-family:var(--f-num);color:var(--acc);margin-left:8px}
+.ticker-in i{font-style:normal;color:var(--up);margin-left:6px;font-family:var(--f-num)}
+@keyframes roll{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.ticker-in{animation:none}}
+
+/* hero */
+.hero{padding-block:64px 40px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:-40% -10% auto auto;width:640px;height:640px;background:radial-gradient(closest-side,color-mix(in srgb,var(--lime) 18%,transparent),transparent);pointer-events:none}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center;position:relative}
+.hero h1{font-size:clamp(42px,6.4vw,78px);line-height:1.02}
+.hero h1 em{font-style:normal;color:var(--lime-ink);background:var(--lime);padding:0 10px;border-radius:10px;display:inline-block;transform:rotate(-1.5deg)}
+.lead{font-size:17px;color:var(--muted);max-width:46ch;margin:22px 0 28px}
+.hero-cta{display:flex;gap:10px;flex-wrap:wrap}
+.stats{display:flex;gap:32px;margin-top:36px;flex-wrap:wrap}
+.stats div{display:flex;flex-direction:column}
+.stats b{font-family:var(--f-num);font-size:26px;font-weight:700}
+.stats span{font-size:13px;color:var(--muted)}
+.rank{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:22px}
+.rank-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.rank-h h3{font-family:var(--f-body);font-weight:700;font-size:16px}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--up)}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 0 4px color-mix(in srgb,var(--up) 25%,transparent)}
+.rank ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.rank li{display:grid;grid-template-columns:22px 120px 1fr 52px;align-items:center;gap:10px;font-size:14px}
+.rank .no{font-family:var(--f-num);color:var(--muted);font-size:12px}
+.rank .nm{display:flex;align-items:center;gap:8px;font-weight:700;min-width:0}
+.rank .tr{height:8px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.rank .tr i{display:block;height:100%;background:var(--muted);border-radius:99px}
+.rank li:first-child .tr i{background:var(--lime)}
+.rank .pv{text-align:right;font-family:var(--f-num);font-weight:700}
+@media (max-width:960px){.hero-grid{grid-template-columns:1fr}}
+@media (max-width:420px){.rank li{grid-template-columns:18px 96px 1fr 44px;font-size:13px}}
+
+.mono{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:900;font-size:12px;flex:none;letter-spacing:-.02em}
+.mono.s{width:24px;height:24px;border-radius:7px;font-size:9px}
+
+/* exchanges */
+.xgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:960px){.xgrid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.xgrid{grid-template-columns:1fr}}
+.xc{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:16px;position:relative}
+.xc.pick{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime) inset}
+.xc-top{display:flex;align-items:center;gap:12px}
+.xc-top b{font-size:17px;display:block;line-height:1.2}
+.xc-top small{color:var(--muted);font-size:12px}
+.badge{position:absolute;top:18px;right:18px;font-size:11px;font-weight:900;background:var(--lime);color:var(--lime-ink);padding:3px 9px;border-radius:7px}
+.xc-pb{display:flex;align-items:baseline;gap:6px}
+.xc-pb .big{font-family:var(--f-disp);font-size:56px;line-height:.9;color:var(--acc)}
+.xc-pb .pc{font-family:var(--f-disp);font-size:26px;color:var(--acc)}
+.xc-pb small{color:var(--muted);font-size:13px;margin-left:4px}
+.fees{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fees div{background:var(--sunk);border-radius:12px;padding:10px 12px}
+.fees span{display:block;font-size:11px;color:var(--muted)}
+.fees s{font-family:var(--f-num);font-size:12px;color:var(--muted);margin-right:6px}
+.fees b{font-family:var(--f-num);font-size:15px}
+.meta{display:flex;flex-wrap:wrap;gap:6px;font-size:12px}
+.meta span{border:1px solid var(--line);border-radius:99px;padding:3px 9px;color:var(--muted)}
+.meta .ok{color:var(--up);border-color:color-mix(in srgb,var(--up) 40%,var(--line))}
+.code{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1.5px dashed var(--muted);border-radius:12px;padding:9px 9px 9px 14px;background:transparent;cursor:pointer;width:100%;text-align:left}
+.code:hover{border-color:var(--acc);border-style:solid}
+.code .lb{font-size:11px;color:var(--muted);display:block}
+.code .cv{font-family:var(--f-num);font-weight:700;font-size:16px}
+.code em{font-style:normal;font-size:12px;font-weight:700;background:var(--sunk);padding:5px 10px;border-radius:8px}
+.code.copied em{background:var(--up);color:#06150e}
+.xc-act{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:auto}
+.note{font-size:12px;color:var(--muted);margin-top:14px}
+
+/* calculator */
+.calc{display:grid;grid-template-columns:.9fr 1.1fr;gap:20px}
+@media (max-width:960px){.calc{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px;min-width:0}
+.seg{display:inline-flex;background:var(--sunk);border-radius:11px;padding:3px;border:1px solid var(--line)}
+.seg button{border:0;background:none;padding:7px 14px;border-radius:9px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--lime);color:var(--lime-ink)}
+.fld{margin-top:22px}
+.fld label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+.vrow{display:flex;align-items:baseline;gap:8px}
+.vin{font-family:var(--f-num);font-size:34px;font-weight:700;width:100%;max-width:260px;border:0;border-bottom:2px solid var(--line);background:transparent;color:var(--ink);padding:2px 0}
+.vin:focus{outline:none;border-bottom-color:var(--acc)}
+.vrow span{font-family:var(--f-num);color:var(--muted)}
+input[type=range]{width:100%;margin-top:16px;accent-color:var(--lime)}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.presets button{border:1px solid var(--line);background:transparent;border-radius:99px;font-family:var(--f-num);font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer}
+.presets button:hover{border-color:var(--acc);color:var(--acc)}
+.best{margin-top:24px;background:var(--lime);color:var(--lime-ink);border-radius:16px;padding:18px}
+.best small{font-size:12px;font-weight:700;opacity:.75}
+.best .bn{font-family:var(--f-disp);font-size:24px;margin:2px 0 8px}
+.best .row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:700}
+.best .row b{font-family:var(--f-num);font-size:22px}
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar{display:grid;grid-template-columns:112px 1fr 128px;align-items:center;gap:12px;font-size:14px}
+.bar .nm{display:flex;align-items:center;gap:8px;font-weight:700;min-width:0}
+.bar .tr{height:12px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.bar .tr i{display:block;height:100%;background:var(--muted);border-radius:99px;transition:width .35s ease}
+.bar.top .tr i{background:var(--lime)}
+.bar .v{text-align:right;font-family:var(--f-num);font-weight:700}
+.bar .v small{color:var(--muted);font-weight:500}
+.calc-note{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);margin-top:18px;padding-top:12px}
+@media (max-width:420px){.bar{grid-template-columns:84px 1fr 100px;font-size:12px}}
+
+/* how */
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:h}
+@media (max-width:760px){.how{grid-template-columns:1fr}}
+.how li{list-style:none;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px;counter-increment:h}
+.how li::before{content:"0" counter(h);font-family:var(--f-num);font-weight:700;font-size:13px;color:var(--acc);display:block;margin-bottom:12px}
+.how b{font-size:18px;display:block;margin-bottom:6px}
+.how span{color:var(--muted);font-size:14px}
+.how-wrap{padding:0;margin:0}
+
+/* events */
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.chips button{border:1px solid var(--line);background:transparent;border-radius:99px;padding:7px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted)}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.evs{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.ev{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:10px;text-decoration:none;transition:transform .15s ease,border-color .15s ease}
+.ev:hover{transform:translateY(-3px);border-color:var(--acc)}
+.ev-t{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ev-x{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+.ty{font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px}
+.ty.comp{background:color-mix(in srgb,var(--hot) 18%,transparent);color:var(--hot)}
+.ty.new{background:color-mix(in srgb,var(--up) 18%,transparent);color:var(--up)}
+.ev h3{font-family:var(--f-body);font-weight:700;font-size:15px;line-height:1.4}
+.ev .prize{font-family:var(--f-disp);font-size:30px;line-height:1.05}
+.ev dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:12.5px}
+.ev dt{color:var(--muted)}
+.ev dd{margin:0;font-weight:500}
+.ev .ft{display:flex;justify-content:space-between;align-items:center;margin-top:auto;font-size:13px;font-weight:700}
+.ev .ft .go{color:var(--acc)}
+.dday{font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.dday.soon{color:var(--hot)}
+
+/* schedule + faq */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:960px){.two{grid-template-columns:1fr}}
+.panel h2{font-size:28px}
+.sched{width:100%;border-collapse:collapse;margin-top:16px;font-size:14px}
+.sched td{padding:12px 4px;border-top:1px solid var(--line)}
+.sched td:last-child{text-align:right}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--up)}
+.st::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--up)}
+.faq{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.faq details{border:1px solid var(--line);border-radius:12px;padding:0 16px;background:var(--bg)}
+.faq summary{cursor:pointer;list-style:none;padding:14px 0;font-weight:700;display:flex;justify-content:space-between;gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--f-num);color:var(--acc);font-size:18px;line-height:1}
+.faq details[open] summary::after{content:"−"}
+.faq p{margin:0 0 14px;color:var(--muted);font-size:14px}
+.warn{font-size:12.5px;color:var(--muted);background:var(--sunk);border-radius:10px;padding:10px 12px;margin-top:16px}
+
+/* channels */
+.cta{background:var(--lime);color:var(--lime-ink);border-radius:26px;padding:36px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap}
+.cta h2{font-size:clamp(28px,3.4vw,40px);margin:0}
+.cta p{margin:8px 0 0;font-weight:500;opacity:.8}
+.chs{display:flex;gap:8px;flex-wrap:wrap}
+.chs a{background:var(--lime-ink);color:var(--lime);text-decoration:none;font-weight:700;padding:12px 18px;border-radius:12px;font-size:14px}
+footer{padding-block:44px 64px;color:var(--muted);font-size:13px}
+.foot{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:28px}
+.foot nav{display:flex;gap:16px;flex-wrap:wrap}
+.foot nav a{text-decoration:none}
+.foot nav a:hover{color:var(--ink)}
+
+/* guide dialog */
+dialog{border:1px solid var(--line);border-radius:22px;background:var(--surface);color:var(--ink);padding:0;width:min(520px,calc(100vw - 32px));max-height:calc(100dvh - 40px)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.dg{padding:24px}
+.dg-h{display:flex;align-items:center;gap:12px}
+.dg-h h3{font-family:var(--f-body);font-weight:900;font-size:19px}
+.dg-h .icon-btn{margin-left:auto}
+.dg .seg{margin-top:18px}
+.steps{list-style:none;padding:0;margin:18px 0 0;display:flex;flex-direction:column;gap:14px;counter-reset:s}
+.steps li{display:grid;grid-template-columns:30px 1fr;gap:12px;counter-increment:s}
+.steps li::before{content:counter(s);width:30px;height:30px;border-radius:9px;background:var(--sunk);color:var(--acc);display:grid;place-items:center;font-family:var(--f-num);font-weight:700;font-size:13px}
+.steps b{display:block}
+.steps span{color:var(--muted);font-size:13.5px}
+.dg-act{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px}
+
+.fab{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--lime);color:var(--lime-ink);text-decoration:none;font-weight:900;font-size:14px;padding:13px 18px;border-radius:99px;box-shadow:0 12px 28px -10px rgba(0,0,0,.6);display:flex;align-items:center;gap:8px}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;z-index:30}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="nav">
+      <a class="logo" href="#top" aria-label="COGU 홈"><span class="logo-mark">구</span><span class="logo-word">COGU</span></a>
+      <nav class="menu" aria-label="주요 메뉴">
+        <a href="#exchanges">거래소 혜택</a>
+        <a href="#calc">페이백 계산기</a>
+        <a href="#how">이용 방법</a>
+        <a href="#events">이벤트·대회</a>
+        <a href="#info">지급·FAQ</a>
+      </nav>
+      <div class="nav-r">
+        <button class="icon-btn" id="themeBtn" aria-label="밝은 화면/어두운 화면 바꾸기">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <a class="btn btn-lime" href="#exchanges">페이백 받고 가입하기</a>
+        <button class="icon-btn" id="menuBtn" aria-label="메뉴 열기" aria-expanded="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <nav class="mmenu" id="mmenu" aria-label="모바일 메뉴">
+      <a href="#exchanges">거래소 혜택</a><a href="#calc">페이백 계산기</a><a href="#how">이용 방법</a><a href="#events">이벤트·대회</a><a href="#info">지급·FAQ</a>
+    </nav>
+  </div>
+</header>
+
+<div class="ticker" aria-hidden="true"><div class="ticker-in" id="ticker"></div></div>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="tag">// TRADING FEE PAYBACK</div>
+        <h1 style="margin-top:14px">낸 수수료,<br><em>다시 받아가세요</em></h1>
+        <p class="lead">COGU 추천 코드로 거래소에 가입하면, 거래할 때마다 낸 수수료의 일부가 자동으로 내 지갑에 돌아옵니다. 거래 방식은 그대로, 비용만 줄어듭니다.</p>
+        <div class="hero-cta">
+          <a class="btn btn-lime" href="#exchanges">거래소 고르기</a>
+          <a class="btn btn-line" href="#calc">얼마나 받는지 계산</a>
+        </div>
+        <div class="stats">
+          <div><b id="sMax">-</b><span>최대 페이백</span></div>
+          <div><b id="sCount">-</b><span>제휴 거래소</span></div>
+          <div><b>업비트·빗썸</b><span>입출금 연결</span></div>
+        </div>
+      </div>
+      <aside class="rank" aria-label="페이백 순위">
+        <div class="rank-h"><h3>거래소 페이백 순위</h3><span class="live">11월 기준</span></div>
+        <ol id="rank"></ol>
+      </aside>
+    </div>
+  </section>
+
+  <section class="sec" id="exchanges" style="padding-top:32px">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <div class="tag">// EXCHANGES</div>
+          <h2>거래소별 혜택</h2>
+          <p>추천 코드를 눌러 복사한 뒤 가입 화면의 추천인(Referral) 칸에 붙여 넣으세요. 이미 계정이 있다면 가이드에서 추천인 변경 방법을 확인할 수 있습니다.</p>
+        </div>
+      </div>
+      <div class="xgrid" id="xgrid"></div>
+      <p class="note">선물(USDT-M) 기본 수수료 기준입니다. 취소선은 원래 수수료, 굵은 숫자는 페이백을 반영한 실질 수수료입니다.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="calc" style="background:var(--surface);border-block:1px solid var(--line)">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <div class="tag">// CALCULATOR</div>
+          <h2>한 달에 얼마나 돌려받을까</h2>
+          <p>한 달 선물 거래량을 넣으면 거래소별로 돌려받는 금액을 바로 비교해 드립니다.</p>
+        </div>
+      </div>
+      <div class="calc">
+        <div class="panel" style="background:var(--bg)">
+          <div class="seg" role="group" aria-label="주문 방식">
+            <button id="mTaker" aria-pressed="true">시장가</button>
+            <button id="mMaker" aria-pressed="false">지정가</button>
+          </div>
+          <div class="fld">
+            <label for="vin">한 달 거래량</label>
+            <div class="vrow"><input class="vin" id="vin" inputmode="numeric" value="500,000"><span>USDT</span></div>
+            <input type="range" id="vrange" min="10000" max="5000000" step="10000" value="500000" aria-label="거래량 조절">
+            <div class="presets">
+              <button data-v="100000">10만</button><button data-v="500000">50만</button><button data-v="1000000">100만</button><button data-v="3000000">300만</button>
+            </div>
+          </div>
+          <div class="best">
+            <small>가장 많이 돌려받는 곳</small>
+            <div class="bn" id="bestName">-</div>
+            <div class="row"><span>한 달 <b id="bestM">0</b> USDT</span><span>1년 <b id="bestY">0</b> USDT</span></div>
+          </div>
+        </div>
+        <div class="panel" style="background:var(--bg)">
+          <div class="bars" id="bars"></div>
+          <div class="calc-note">선물 기본 수수료 × 페이백 비율로 계산한 예상치입니다. 실제 지급액은 거래소 정책과 VIP 등급에 따라 달라질 수 있습니다.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="how">
+    <div class="wrap">
+      <div class="sec-head"><div><div class="tag">// HOW IT WORKS</div><h2>이렇게 돌려받아요</h2></div></div>
+      <ol class="how how-wrap">
+        <li><b>추천 코드 복사</b><span>거래소 카드에서 COGU 추천 코드를 누르면 바로 복사됩니다.</span></li>
+        <li><b>가입하고 본인 인증</b><span>가입 화면에 코드를 넣고, 본인 명의로 인증(KYC)을 마칩니다.</span></li>
+        <li><b>거래하면 자동 지급</b><span>거래할 때마다 수수료 일부가 정해진 시간에 거래소 지갑으로 들어옵니다.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec" id="events" style="padding-top:0">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <div class="tag">// EVENTS</div>
+          <h2>진행 중인 이벤트·대회</h2>
+          <p>신규 가입 혜택과 거래 대회를 모았습니다. 끝난 이벤트는 자동으로 빠집니다.</p>
+        </div>
+      </div>
+      <div class="chips" id="chips" role="group" aria-label="이벤트 필터"></div>
+      <div class="evs" id="evs"></div>
+    </div>
+  </section>
+
+  <section class="sec" id="info" style="padding-top:0">
+    <div class="wrap two">
+      <div class="panel">
+        <div class="tag">// PAYBACK TIME</div>
+        <h2>페이백 지급 시간</h2>
+        <table class="sched"><tbody id="sched"></tbody></table>
+        <p class="warn">거래소 점검이나 정책 변경으로 늦어질 수 있습니다. 24시간 넘게 들어오지 않으면 UID와 함께 상담 채널로 알려 주세요.</p>
+      </div>
+      <div class="panel">
+        <div class="tag">// FAQ</div>
+        <h2>자주 묻는 질문</h2>
+        <div class="faq">
+          <details open><summary>페이백이 뭔가요?</summary><p>거래소는 추천 코드로 가입한 회원의 수수료 일부를 추천인에게 지급합니다. COGU는 그 몫을 회원님께 다시 돌려드립니다.</p></details>
+          <details><summary>안전한가요?</summary><p>모든 혜택은 각 거래소의 공식 추천 프로그램으로 지급됩니다. COGU는 계정 비밀번호나 자산에 접근하지 않고, 그런 정보를 요청하지도 않습니다.</p></details>
+          <details><summary>이미 다른 추천인으로 가입했어요.</summary><p>일부 거래소는 고객센터를 통해 추천인 변경이 가능합니다. 거래소 카드의 ‘가이드’에서 ‘기존 계정’ 탭을 확인해 주세요.</p></details>
+          <details><summary>페이백은 어디로 들어오나요?</summary><p>가입한 거래소 계정의 지갑으로 직접 들어옵니다. 지급 주기는 왼쪽 표를 확인해 주세요.</p></details>
+          <details><summary>가입할 때 주의할 점은요?</summary><p>반드시 본인 명의로 가입하고 본인 인증을 완료해 주세요. 타인 명의 계정은 페이백이 제한되고 계정이 정지될 수 있습니다.</p></details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" style="padding-top:0">
+    <div class="wrap">
+      <div class="cta">
+        <div>
+          <h2>궁금한 건 바로 물어보세요</h2>
+          <p>가입, 본인 인증, 페이백 확인까지 1:1로 도와드립니다.</p>
+        </div>
+        <div class="chs" id="chs"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <a class="logo" href="#top"><span class="logo-mark" style="width:28px;height:28px;font-size:16px">구</span><span class="logo-word" style="font-size:20px">COGU</span></a>
+      <p style="max-width:60ch;margin-top:12px">가상자산 거래는 원금 손실 위험이 큽니다. 레버리지 거래는 특히 신중하게 결정하고, 본인 명의 계정만 사용해 주세요.</p>
+      <p>© 2026 COGU</p>
+    </div>
+    <nav aria-label="하단 메뉴"><a href="#exchanges">거래소 혜택</a><a href="#calc">계산기</a><a href="#events">이벤트</a><a href="#info">FAQ</a></nav>
+  </div>
+</footer>
+
+<a class="fab" id="fab" href="#" target="_blank" rel="noopener">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 3.6 2.9 10.8c-1 .4-1 1.6.1 1.9l4.7 1.5 1.8 5.6c.3.8 1.3 1 1.9.4l2.6-2.5 4.9 3.6c.7.5 1.6.1 1.8-.7l3.2-15.1c.2-1-.7-1.8-1.7-1.4zM9.7 14.3l8.6-7.6-6.9 8.7-.3 3.3-1.4-4.4z"/></svg>
+  상담하기
+</a>
+<div class="toast" id="toast" hidden></div>
+
+<dialog id="guide" aria-labelledby="gTitle">
+  <div class="dg">
+    <div class="dg-h"><span id="gMono"></span><h3 id="gTitle">가이드</h3><button class="icon-btn" id="gClose" aria-label="닫기">✕</button></div>
+    <div class="seg" role="group" aria-label="가이드 종류">
+      <button id="gNew" aria-pressed="true">신규 가입</button>
+      <button id="gOld" aria-pressed="false">기존 계정</button>
+    </div>
+    <ol class="steps" id="gSteps"></ol>
+    <div class="dg-act"><button class="btn btn-line" id="gCopy">코드 복사</button><a class="btn btn-lime" id="gJoin" href="#" target="_blank" rel="noopener">가입하러 가기</a></div>
+  </div>
+</dialog>
+
+<script>
+/* =========================================================
+   여기만 고치면 사이트 내용이 바뀝니다
+   - payback: 페이백 비율(%)   - code: 내 추천 코드
+   - link: 내 추천 가입 링크   - maker/taker: 기본 수수료(%)
+   - schedule: 페이백 지급 시간  - pick:true 를 넣으면 '추천' 표시
+   ========================================================= */
+const EXCHANGES = [
+  {id:"gate",    name:"Gate",    ko:"게이트",   color:"#2354E6", fg:"#fff",    payback:70, maker:0.02, taker:0.05,  code:"COGU",   link:"https://www.gate.com/",                    schedule:"매일 오전", pick:true},
+  {id:"toobit",  name:"Toobit",  ko:"투빗",     color:"#2B2F36", fg:"#fff",    payback:60, maker:0.02, taker:0.06,  code:"cogu",   link:"https://www.toobit.com/",                  schedule:"거래 후 약 1시간"},
+  {id:"bitget",  name:"Bitget",  ko:"비트겟",   color:"#00C7D4", fg:"#062a2c", payback:50, maker:0.02, taker:0.06,  code:"COGU",   link:"https://www.bitget.com/",                  schedule:"다음 날 오후"},
+  {id:"bybit",   name:"Bybit",   ko:"바이비트", color:"#17181E", fg:"#F7A600", payback:20, maker:0.02, taker:0.055, code:"122998", link:"https://www.bybit.com/invite?ref=122998", schedule:"매주 월요일"},
+  {id:"okx",     name:"OKX",     ko:"OKX",      color:"#000000", fg:"#fff",    payback:20, maker:0.02, taker:0.05,  code:"COGU",   link:"https://www.okx.com/",                     schedule:"약 1시간 단위"},
+  {id:"binance", name:"Binance", ko:"바이낸스", color:"#F0B90B", fg:"#1E2026", payback:10, maker:0.02, taker:0.05,  code:"COGU",   link:"https://www.binance.com/",                 schedule:"거래 후 약 1시간"}
+];
+
+/* 이벤트: type은 "comp"(대회) 또는 "new"(신규 가입) / end 날짜가 지나면 자동으로 숨겨집니다 */
+const EVENTS = [
+  {ex:"gate",    type:"comp", title:"11월 선물 개인 거래 대회", prize:"$100,000", start:"2026-11-01", end:"2026-11-30", cond:[["참가 조건","선물 자산 $200 이상"],["거래량","$100,000 이상"]], link:"https://www.gate.com/"},
+  {ex:"toobit",  type:"new",  title:"신규 가입 미션 리워드",     prize:"최대 $500", start:"2026-11-01", end:"2026-12-31", cond:[["대상","신규 가입자"],["방식","미션 달성 시 바우처"]], link:"https://www.toobit.com/"},
+  {ex:"bitget",  type:"comp", title:"11월 개인 트레이딩 대회",   prize:"$50,000",   start:"2026-11-01", end:"2026-11-30", cond:[["참가 조건","선물 자산 $100 이상"],["거래량","$200,000 이상"]], link:"https://www.bitget.com/"},
+  {ex:"bybit",   type:"new",  title:"첫 입금 리워드",            prize:"20 USDT",   start:"2026-11-03", end:"2026-11-30", cond:[["조건","100 USDT 이상 입금"],["인원","선착순 지급"]], link:"https://www.bybit.com/invite?ref=122998"},
+  {ex:"okx",     type:"new",  title:"입금·거래 리워드",          prize:"최대 $200", start:"2026-11-01", end:"2026-11-30", cond:[["대상","신규 가입자"],["방식","입금 후 거래 미션"]], link:"https://www.okx.com/"},
+  {ex:"binance", type:"comp", title:"선물 거래량 챌린지",        prize:"$20,000",   start:"2026-11-10", end:"2026-12-10", cond:[["거래량","$50,000 이상"],["참가","신청 필요"]], link:"https://www.binance.com/"}
+];
+
+/* 기존 계정 추천인 변경 방법 (거래소별) */
+const REF_STEPS = {
+  gate:   [["고객센터 채팅 열기","앱이나 웹 오른쪽 아래 고객센터를 엽니다."],["추천인 변경 요청","‘추천인 변경’을 요청하고 새 추천 코드를 전달합니다."],["완료 알리기","변경되면 COGU 상담 채널에 UID를 남겨 주세요."]],
+  toobit: [["고객센터 문의","Toobit 고객센터에 추천인 변경을 요청합니다."],["코드 전달","새 추천 코드와 본인 UID를 전달합니다."],["완료 알리기","처리 후 COGU 상담 채널에 UID를 남겨 주세요."]],
+  bitget: [["정책 확인","Bitget은 기존 계정의 추천인 변경을 제한하는 경우가 있습니다."],["고객센터 문의","가능 여부를 고객센터에서 먼저 확인합니다."],["상담 요청","어렵다면 COGU 상담 채널로 문의해 주세요."]],
+  bybit:  [["고객센터 문의","Bybit 고객센터에 추천인 변경 가능 여부를 묻습니다."],["코드 전달","가능하다면 새 추천 코드를 전달합니다."],["완료 알리기","처리 후 COGU 상담 채널에 UID를 남겨 주세요."]],
+  okx:    [["고객센터 문의","OKX 고객센터에 추천인 변경을 요청합니다."],["코드 전달","새 추천 코드와 UID를 전달합니다."],["완료 알리기","처리 후 COGU 상담 채널에 UID를 남겨 주세요."]],
+  binance:[["정책 확인","Binance는 추천인 변경 조건이 까다로운 편입니다."],["고객센터 문의","가능 여부를 고객센터에서 먼저 확인합니다."],["상담 요청","막히면 COGU 상담 채널로 문의해 주세요."]]
+};
+
+/* 상담·방송 채널: link를 비워 두면("") 사이트에 안 보입니다 */
+const CHANNELS = [
+  {name:"텔레그램 상담", link:"https://t.me/cogucoin"},
+  {name:"유튜브",        link:"https://www.youtube.com/@cogucoin"},
+  {name:"SOOP(숲)",      link:""},
+  {name:"치지직",        link:""}
+];
+/* ===================== 설정 끝 ===================== */
+
+const $ = s => document.querySelector(s);
+const byId = Object.fromEntries(EXCHANGES.map(e => [e.id, e]));
+const mono = (e, cls="mono") => `<span class="${cls}" style="background:${e.color};color:${e.fg}">${e.name.slice(0,2).toUpperCase()}</span>`;
+const pct = n => (+n.toFixed(4)) + "%";
+const won = n => Math.round(n).toLocaleString("ko-KR");
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,1800)}
+function copy(code, el){
+  const ok=()=>{toast(`추천 코드 ${code} 복사됨`); if(el){el.classList.add("copied");const em=el.querySelector("em");if(em){em.textContent="복사됨";setTimeout(()=>{el.classList.remove("copied");em.textContent="복사"},1600)}}};
+  try{navigator.clipboard.writeText(code).then(ok).catch(()=>toast(`코드: ${code} (길게 눌러 복사)`))}catch(_){toast(`코드: ${code} (길게 눌러 복사)`)}
+}
+
+/* theme */
+try{const t=localStorage.getItem("cogu-theme"); if(t) document.documentElement.dataset.theme=t}catch(_){}
+$("#themeBtn").addEventListener("click",()=>{
+  const r=document.documentElement, n=r.dataset.theme==="light"?"dark":"light"; r.dataset.theme=n;
+  try{localStorage.setItem("cogu-theme",n)}catch(_){}
+});
+$("#menuBtn").addEventListener("click",()=>{const m=$("#mmenu"),o=!m.classList.contains("open");m.classList.toggle("open",o);$("#menuBtn").setAttribute("aria-expanded",o)});
+$("#mmenu").addEventListener("click",e=>{if(e.target.tagName==="A"){$("#mmenu").classList.remove("open");$("#menuBtn").setAttribute("aria-expanded","false")}});
+
+/* ticker + stats + rank */
+const t1 = EXCHANGES.map(e=>`<span>${e.ko} 페이백<b>${e.payback}%</b><i>시장가 ${pct(e.taker*(1-e.payback/100))}</i></span>`).join("");
+$("#ticker").innerHTML = t1 + t1;
+$("#sMax").textContent = Math.max(...EXCHANGES.map(e=>e.payback)) + "%";
+$("#sCount").textContent = EXCHANGES.length + "곳";
+const sorted = [...EXCHANGES].sort((a,b)=>b.payback-a.payback);
+const topPb = sorted[0].payback || 1;
+$("#rank").innerHTML = sorted.map((e,i)=>`<li><span class="no">${String(i+1).padStart(2,"0")}</span><span class="nm">${mono(e,"mono s")}${e.ko}</span><span class="tr"><i style="width:${e.payback/topPb*100}%"></i></span><span class="pv">${e.payback}%</span></li>`).join("");
+
+/* exchange cards */
+$("#xgrid").innerHTML = EXCHANGES.map(e=>{
+  const rm=e.maker*(1-e.payback/100), rt=e.taker*(1-e.payback/100);
+  return `<article class="xc${e.pick?" pick":""}">
+    ${e.pick?'<span class="badge">추천</span>':""}
+    <div class="xc-top">${mono(e)}<div><b>${e.ko}</b><small>${e.name}</small></div></div>
+    <div class="xc-pb"><span class="big">${e.payback}</span><span class="pc">%</span><small>수수료 페이백</small></div>
+    <div class="fees">
+      <div><span>지정가</span><s>${pct(e.maker)}</s><b>${pct(rm)}</b></div>
+      <div><span>시장가</span><s>${pct(e.taker)}</s><b>${pct(rt)}</b></div>
+    </div>
+    <div class="meta"><span class="ok">업비트·빗썸 입출금</span><span>지급: ${e.schedule}</span></div>
+    <button class="code" data-code="${e.code}" aria-label="${e.ko} 추천 코드 ${e.code} 복사"><span><span class="lb">추천 코드</span><span class="cv">${e.code}</span></span><em>복사</em></button>
+    <div class="xc-act"><a class="btn btn-lime" href="${e.link}" target="_blank" rel="noopener">가입하기</a><button class="btn btn-line" data-guide="${e.id}">가이드</button></div>
+  </article>`}).join("");
+
+document.addEventListener("click",ev=>{
+  const c=ev.target.closest(".code"); if(c) copy(c.dataset.code,c);
+  const g=ev.target.closest("[data-guide]"); if(g) openGuide(g.dataset.guide);
+});
+
+/* guide dialog */
+let gx=null, gmode="new";
+function signupSteps(e){return [
+  ["가입 화면 열기",`아래 ‘가입하러 가기’ 버튼으로 ${e.ko} 가입 화면을 엽니다.`],
+  ["추천 코드 입력",`추천인(Referral) 칸에 ${e.code} 를 넣습니다. 링크로 들어가면 자동으로 들어가 있을 수 있어요.`],
+  ["본인 인증(KYC)","본인 명의 신분증으로 인증을 마칩니다."],
+  ["UID 남기기","가입 후 COGU 상담 채널에 UID를 남기면 페이백 확인이 빨라집니다."]
+]}
+function renderGuide(){
+  const e=byId[gx], list=gmode==="new"?signupSteps(e):(REF_STEPS[gx]||[]);
+  $("#gSteps").innerHTML=list.map(([t,d])=>`<li><div><b>${t}</b><span>${d}</span></div></li>`).join("");
+  $("#gNew").setAttribute("aria-pressed",gmode==="new"); $("#gOld").setAttribute("aria-pressed",gmode==="old");
+}
+function openGuide(id){
+  gx=id; gmode="new"; const e=byId[id];
+  $("#gMono").innerHTML=mono(e); $("#gTitle").textContent=`${e.ko} 가이드`; $("#gJoin").href=e.link;
+  renderGuide();
+  const d=$("#guide"); if(d.showModal) d.showModal(); else d.setAttribute("open","");
+}
+$("#gNew").addEventListener("click",()=>{gmode="new";renderGuide()});
+$("#gOld").addEventListener("click",()=>{gmode="old";renderGuide()});
+$("#gCopy").addEventListener("click",()=>copy(byId[gx].code));
+$("#gClose").addEventListener("click",()=>$("#guide").close());
+$("#guide").addEventListener("click",e=>{if(e.target===$("#guide")) $("#guide").close()});
+
+/* calculator */
+let vol=500000, mode="taker";
+function renderCalc(){
+  const rows=EXCHANGES.map(e=>({e,v:vol*(mode==="taker"?e.taker:e.maker)/100*e.payback/100})).sort((a,b)=>b.v-a.v);
+  const max=rows[0].v||1;
+  $("#bars").innerHTML=rows.map((r,i)=>`<div class="bar${i===0?" top":""}"><span class="nm">${mono(r.e,"mono s")}${r.e.ko}</span><span class="tr"><i style="width:${Math.max(2,r.v/max*100)}%"></i></span><span class="v">${won(r.v)} <small>USDT</small></span></div>`).join("");
+  $("#bestName").textContent=rows[0].e.ko;
+  $("#bestM").textContent=won(rows[0].v);
+  $("#bestY").textContent=won(rows[0].v*12);
+}
+function setVol(v,from){
+  vol=Math.max(0,Math.min(100000000,v||0));
+  if(from!=="in") $("#vin").value=vol.toLocaleString("ko-KR");
+  if(from!=="range") $("#vrange").value=Math.min(5000000,vol);
+  renderCalc();
+}
+$("#vin").addEventListener("input",e=>{const raw=e.target.value.replace(/[^0-9]/g,"");e.target.value=raw?(+raw).toLocaleString("ko-KR"):"";setVol(+raw,"in")});
+$("#vrange").addEventListener("input",e=>setVol(+e.target.value,"range"));
+document.querySelectorAll(".presets button").forEach(b=>b.addEventListener("click",()=>setVol(+b.dataset.v)));
+[["#mTaker","taker"],["#mMaker","maker"]].forEach(([s,m])=>$(s).addEventListener("click",()=>{mode=m;$("#mTaker").setAttribute("aria-pressed",m==="taker");$("#mMaker").setAttribute("aria-pressed",m==="maker");renderCalc()}));
+renderCalc();
+
+/* events */
+const today=new Date(); today.setHours(0,0,0,0);
+const live=EVENTS.filter(ev=>new Date(ev.end+"T23:59:59")>=today && byId[ev.ex]);
+let filt="all";
+const fdefs=[["all","전체"],["comp","거래 대회"],["new","신규 가입"],...[...new Set(live.map(e=>e.ex))].map(id=>[id,byId[id].ko])];
+$("#chips").innerHTML=fdefs.map(([k,l])=>`<button data-f="${k}" aria-pressed="${k==="all"}">${l}</button>`).join("");
+$("#chips").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;filt=b.dataset.f;$("#chips").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderEvents()});
+function dday(end){const d=Math.ceil((new Date(end+"T23:59:59")-new Date())/864e5);return d<=0?"오늘 마감":`D-${d}`}
+function renderEvents(){
+  const list=live.filter(ev=>filt==="all"||ev.type===filt||ev.ex===filt);
+  $("#evs").innerHTML=list.length?list.map(ev=>{const e=byId[ev.ex],dd=dday(ev.end),soon=/오늘|D-[1-7]$/.test(dd);
+    return `<a class="ev" href="${ev.link}" target="_blank" rel="noopener">
+      <div class="ev-t"><span class="ev-x">${mono(e,"mono s")}${e.ko}</span><span class="ty ${ev.type}">${ev.type==="comp"?"거래 대회":"신규 가입"}</span></div>
+      <h3>${ev.title}</h3><div class="prize">${ev.prize}</div>
+      <dl>${ev.cond.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}<dt>기간</dt><dd class="num" style="font-size:12px">${ev.start.slice(5).replace("-",".")} – ${ev.end.slice(5).replace("-",".")}</dd></dl>
+      <div class="ft"><span class="go">자세히 보기 →</span><span class="dday${soon?" soon":""}">${dd}</span></div>
+    </a>`}).join(""):`<p style="color:var(--muted)">진행 중인 이벤트가 없습니다.</p>`;
+}
+renderEvents();
+
+/* schedule */
+$("#sched").innerHTML=EXCHANGES.map(e=>`<tr><td><span style="display:inline-flex;align-items:center;gap:10px;font-weight:700">${mono(e,"mono s")}${e.ko}</span></td><td style="font-weight:700">${e.schedule}</td><td><span class="st">정상</span></td></tr>`).join("");
+
+/* channels */
+const chs=CHANNELS.filter(c=>c.link);
+$("#chs").innerHTML=chs.map(c=>`<a href="${c.link}" target="_blank" rel="noopener">${c.name}</a>`).join("");
+const tg=chs.find(c=>c.link.includes("t.me")); if(tg) $("#fab").href=tg.link; else $("#fab").hidden=true;
+</script>
+</body>
+</html>
