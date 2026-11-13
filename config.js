@@ -5,8 +5,8 @@
 // 1) Supabase 연결 정보
 //    Supabase 대시보드 → Project Settings → API 에서 복사해 붙여넣으세요.
 //    비워두면 "예시 화면"으로 보입니다.
-export const SUPABASE_URL = "";       // 예: "https://abcdefgh.supabase.co"
-export const SUPABASE_ANON_KEY = "";  // 예: "eyJhbGciOi..." (anon public 키)
+export const SUPABASE_URL = "https://mpnmasrtahujfrvipife.supabase.co";
+export const SUPABASE_ANON_KEY = "sb_publishable_mvHaCp9ef0JC_JbHAp4m0A_uH57TpG2"; // Publishable 키 (공개돼도 괜찮은 키)
 
 // 2) 사이트 이름 (로고와 브라우저 탭에 표시)
 export const SITE_NAME = "COGU TV";
