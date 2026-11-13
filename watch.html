@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{SITE}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='6' width='30' height='21' rx='6' fill='%23ff3b3b'/><path d='M13 11v11l9-5.5z' fill='white'/></svg>">
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main class="watch" id="watch">
+  <section class="info-wrap">
+    <div class="player" id="player"></div>
+    <div class="info" id="info"></div>
+  </section>
+  <aside class="side" id="side"><h3>다음 영상</h3></aside>
+</main>
+
+<script type="module">
+import { sb, CONFIGURED, DEMO, SITE_NAME, esc, publicUrl, fmtViews, timeAgo, renderTopbar, renderNotice, cardHTML } from "./app.js";
+
+renderTopbar();
+renderNotice(document.getElementById("watch"));
+
+const id = new URLSearchParams(location.search).get("v");
+const player = document.getElementById("player");
+const info = document.getElementById("info");
+const side = document.getElementById("side");
+
+async function getVideo() {
+  if (!CONFIGURED) return DEMO.find((v) => v.id === id) || null;
+  const client = await sb();
+  const { data, error } = await client.from("videos").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function getOthers(v) {
+  if (!CONFIGURED) return DEMO.filter((x) => x.id !== v.id);
+  const client = await sb();
+  const { data } = await client.from("videos").select("*").neq("id", v.id).order("created_at", { ascending: false }).limit(40);
+  const list = data || [];
+  // 같은 카테고리를 먼저 보여주기
+  return [...list.filter((x) => x.category === v.category), ...list.filter((x) => x.category !== v.category)].slice(0, 20);
+}
+
+async function addView(v) {
+  if (!CONFIGURED) return;
+  const key = `viewed:${v.id}`;
+  try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch {}
+  const client = await sb();
+  const { error } = await client.rpc("add_view", { vid: v.id });
+  if (!error) v.views = (v.views || 0) + 1;
+}
+
+function drawInfo(v) {
+  document.title = `${v.title} - ${SITE_NAME}`;
+  info.innerHTML = `
+    <h1 class="w-title">${esc(v.title)}</h1>
+    <div class="w-row">
+      <div class="channel"><div class="avatar">${esc(SITE_NAME.charAt(0))}</div><div><b>${esc(SITE_NAME)}</b></div></div>
+      <button class="btn" id="share">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l6 6-6 6M21 11H9a6 6 0 0 0-6 6v2"/></svg>
+        <span id="shareLbl">공유</span>
+      </button>
+    </div>
+    <div class="desc">
+      <div class="meta">${fmtViews(v.views)} · ${timeAgo(v.created_at)}${v.category ? ` · #${esc(v.category)}` : ""}</div>
+      <div class="desc-text">${esc(v.description || "")}</div>
+    </div>`;
+  document.getElementById("share").onclick = async () => {
+    const lbl = document.getElementById("shareLbl");
+    try { await navigator.clipboard.writeText(location.href); lbl.textContent = "링크 복사됨"; }
+    catch { prompt("이 링크를 복사하세요", location.href); }
+    setTimeout(() => (lbl.textContent = "공유"), 2000);
+  };
+}
+
+async function main() {
+  if (!id) { location.href = "./"; return; }
+  try {
+    const v = await getVideo();
+    if (!v) {
+      player.innerHTML = `<div class="demo-thumb">영상을 찾을 수 없어요.<br>삭제되었거나 주소가 잘못됐어요.</div>`;
+      return;
+    }
+    if (v.demo) {
+      player.innerHTML = `<div class="demo-thumb" style="background:${v.bg}"><div><div style="font-size:64px">${v.emoji}</div>예시 영상이에요. Supabase를 연결하면 여기서 실제 영상이 재생돼요.</div></div>`;
+    } else {
+      player.innerHTML = `<video controls autoplay playsinline preload="metadata" ${v.thumb_path ? `poster="${esc(publicUrl(v.thumb_path))}"` : ""} src="${esc(publicUrl(v.video_path))}"></video>`;
+    }
+    await addView(v);
+    drawInfo(v);
+    const others = await getOthers(v);
+    side.insertAdjacentHTML("beforeend", others.length ? others.map((x) => cardHTML(x, { mini: true })).join("") : `<p class="meta">다른 영상이 아직 없어요.</p>`);
+  } catch (err) {
+    console.error(err);
+    player.innerHTML = `<div class="demo-thumb">영상을 불러오지 못했어요.<br>${esc(err.message || err)}</div>`;
+  }
+}
+main();
+</script>
+</body>
+</html>

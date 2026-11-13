@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>스튜디오 - {SITE}</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='6' width='30' height='21' rx='6' fill='%23ff3b3b'/><path d='M13 11v11l9-5.5z' fill='white'/></svg>">
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main class="studio" id="studio">
+  <h1>스튜디오</h1>
+  <p class="meta">영상을 올리고 관리하는 곳이에요. 주인(로그인한 사람)만 들어올 수 있어요.</p>
+
+  <!-- 로그인 -->
+  <section class="panel hidden" id="loginPanel">
+    <h2>로그인</h2>
+    <form id="loginForm">
+      <div class="field"><label for="email">이메일</label><input id="email" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="pw">비밀번호</label><input id="pw" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn-brand" type="submit">로그인</button>
+      <p class="msg" id="loginMsg"></p>
+    </form>
+  </section>
+
+  <!-- 업로드 -->
+  <section class="panel hidden" id="uploadPanel">
+    <div class="w-row"><h2 style="margin:0">영상 올리기</h2><button class="btn" id="logout">로그아웃</button></div>
+    <label class="drop" id="drop" style="margin-top:16px">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <strong>여기를 눌러 영상 파일을 고르거나, 파일을 끌어다 놓으세요</strong>
+      <span id="dropHint">MP4 권장</span>
+      <input type="file" id="file" accept="video/*" hidden>
+    </label>
+
+    <form id="upForm" class="hidden">
+      <div class="up-grid">
+        <div>
+          <div class="field"><label for="title">제목 (필수)</label><input id="title" maxlength="100" required></div>
+          <div class="field"><label for="desc">설명</label><textarea id="desc" maxlength="5000" placeholder="시청자에게 영상에 대해 알려주세요"></textarea></div>
+          <div class="field"><label for="cat">카테고리</label><select id="cat"></select></div>
+          <div class="field"><label for="thumbFile">썸네일 직접 고르기 (선택 — 안 고르면 영상 장면으로 자동 생성)</label><input id="thumbFile" type="file" accept="image/*"></div>
+        </div>
+        <div>
+          <div class="preview"><img id="thumbPreview" alt="썸네일 미리보기"></div>
+          <p class="meta" id="fileInfo" style="margin:8px 0 0"></p>
+        </div>
+      </div>
+      <div class="progress"><i id="bar"></i></div>
+      <p class="msg" id="upMsg"></p>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-brand" type="submit" id="upBtn">게시하기</button>
+        <button class="btn" type="button" id="cancelBtn">취소</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- 내 영상 -->
+  <section class="panel hidden" id="listPanel">
+    <h2>내 영상</h2>
+    <div class="mylist" id="mylist"></div>
+  </section>
+</main>
+
+<script type="module">
+import { sb, CONFIGURED, CATEGORIES, MAX_UPLOAD_MB, SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET, esc, publicUrl, fmtViews, timeAgo, fmtDur, renderTopbar, renderNotice } from "./app.js";
+
+renderTopbar();
+const $ = (id) => document.getElementById(id);
+
+if (!CONFIGURED) {
+  renderNotice($("studio"));
+  $("loginPanel").classList.remove("hidden");
+  $("loginForm").querySelector("button").disabled = true;
+  $("loginMsg").textContent = "Supabase를 연결한 뒤에 로그인할 수 있어요.";
+} else {
+  start();
+}
+
+async function start() {
+  const client = await sb();
+  $("cat").innerHTML = CATEGORIES.map((c) => `<option>${esc(c)}</option>`).join("");
+  $("dropHint").textContent = `MP4 권장 · 최대 ${MAX_UPLOAD_MB}MB`;
+
+  const { data: { session } } = await client.auth.getSession();
+  show(session);
+  client.auth.onAuthStateChange((_e, s) => show(s));
+
+  // ---------- 로그인 ----------
+  $("loginForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const msg = $("loginMsg");
+    msg.className = "msg"; msg.textContent = "로그인 중…";
+    const { error } = await client.auth.signInWithPassword({ email: $("email").value.trim(), password: $("pw").value });
+    if (error) { msg.className = "msg err"; msg.textContent = "로그인 실패: 이메일이나 비밀번호를 확인하세요."; }
+  };
+  $("logout").onclick = () => client.auth.signOut();
+
+  // ---------- 파일 고르기 ----------
+  let picked = null; // { file, thumbBlob, duration }
+  const fileInput = $("file"), drop = $("drop");
+  fileInput.onchange = () => fileInput.files[0] && pick(fileInput.files[0]);
+  drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
+  drop.ondragleave = () => drop.classList.remove("over");
+  drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) pick(f); };
+
+  async function pick(file) {
+    const msg = $("upMsg");
+    if (!file.type.startsWith("video/")) { alert("영상 파일만 올릴 수 있어요."); return; }
+    if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      alert(`파일이 너무 커요 (${(file.size / 1048576).toFixed(1)}MB). ${MAX_UPLOAD_MB}MB 이하로 줄여서 올려주세요.`);
+      return;
+    }
+    drop.classList.add("hidden");
+    $("upForm").classList.remove("hidden");
+    $("title").value = file.name.replace(/\.[^.]+$/, "");
+    $("fileInfo").textContent = `${file.name} · ${(file.size / 1048576).toFixed(1)}MB`;
+    msg.className = "msg"; msg.textContent = "썸네일 만드는 중…";
+    picked = { file, thumbBlob: null, duration: null };
+    try {
+      const { blob, duration } = await snapshot(file);
+      picked.thumbBlob = blob; picked.duration = duration;
+      $("thumbPreview").src = URL.createObjectURL(blob);
+      $("fileInfo").textContent += ` · ${fmtDur(duration)}`;
+      msg.textContent = "";
+    } catch {
+      msg.textContent = "자동 썸네일을 못 만들었어요. 썸네일 이미지를 직접 골라주세요.";
+    }
+  }
+
+  $("thumbFile").onchange = () => {
+    const f = $("thumbFile").files[0];
+    if (f && picked) { picked.thumbBlob = f; $("thumbPreview").src = URL.createObjectURL(f); }
+  };
+
+  $("cancelBtn").onclick = resetForm;
+  function resetForm() {
+    picked = null;
+    $("upForm").reset(); $("upForm").classList.add("hidden");
+    drop.classList.remove("hidden"); fileInput.value = "";
+    $("thumbPreview").removeAttribute("src");
+    $("bar").style.width = "0"; $("upMsg").textContent = "";
+  }
+
+  // ---------- 업로드 ----------
+  $("upForm").onsubmit = async (e) => {
+    e.preventDefault();
+    if (!picked) return;
+    const btn = $("upBtn"), msg = $("upMsg");
+    btn.disabled = true; $("cancelBtn").disabled = true;
+    const { data: { session } } = await client.auth.getSession();
+    const folder = crypto.randomUUID();
+    const ext = (picked.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
+    const videoPath = `${folder}/video.${ext}`;
+    const thumbPath = picked.thumbBlob ? `${folder}/thumb.jpg` : null;
+    try {
+      msg.className = "msg"; msg.textContent = "영상 올리는 중… 창을 닫지 마세요.";
+      await putFile(videoPath, picked.file, session.access_token, (p) => {
+        $("bar").style.width = `${Math.round(p * 100)}%`;
+        msg.textContent = `영상 올리는 중… ${Math.round(p * 100)}% (창을 닫지 마세요)`;
+      });
+      if (thumbPath) await putFile(thumbPath, picked.thumbBlob, session.access_token);
+      const { data, error } = await client.from("videos").insert({
+        title: $("title").value.trim(),
+        description: $("desc").value.trim(),
+        category: $("cat").value,
+        video_path: videoPath,
+        thumb_path: thumbPath,
+        duration: picked.duration,
+      }).select().single();
+      if (error) {
+        await client.storage.from(BUCKET).remove([videoPath, thumbPath].filter(Boolean));
+        throw error;
+      }
+      resetForm();
+      msg.className = "msg ok";
+      msg.innerHTML = `게시 완료! <a href="watch.html?v=${encodeURIComponent(data.id)}" style="text-decoration:underline">영상 보러 가기</a>`;
+      loadMine();
+    } catch (err) {
+      console.error(err);
+      msg.className = "msg err";
+      msg.textContent = `업로드 실패: ${err.message || err}`;
+    } finally {
+      btn.disabled = false; $("cancelBtn").disabled = false;
+    }
+  };
+
+  // ---------- 내 영상 목록 ----------
+  async function loadMine() {
+    const box = $("mylist");
+    box.innerHTML = `<p class="meta">불러오는 중…</p>`;
+    const { data, error } = await client.from("videos").select("*").order("created_at", { ascending: false });
+    if (error) { box.innerHTML = `<p class="msg err">${esc(error.message)}</p>`; return; }
+    if (!data.length) { box.innerHTML = `<p class="meta">아직 올린 영상이 없어요.</p>`; return; }
+    box.innerHTML = data.map((v) => `
+      <div class="myrow" data-id="${esc(v.id)}">
+        <a class="thumb" href="watch.html?v=${encodeURIComponent(v.id)}">${v.thumb_path ? `<img src="${esc(publicUrl(v.thumb_path))}" alt="" loading="lazy">` : ""}</a>
+        <div style="min-width:0"><b>${esc(v.title)}</b><span class="meta">${fmtViews(v.views)} · ${timeAgo(v.created_at)} · ${esc(v.category || "")}</span></div>
+        <button class="btn btn-danger" data-del="${esc(v.id)}">삭제</button>
+      </div>`).join("");
+    box.querySelectorAll("[data-del]").forEach((b) => (b.onclick = async () => {
+      const v = data.find((x) => x.id === b.dataset.del);
+      if (!confirm(`'${v.title}' 영상을 삭제할까요? 되돌릴 수 없어요.`)) return;
+      b.disabled = true;
+      await client.storage.from(BUCKET).remove([v.video_path, v.thumb_path].filter(Boolean));
+      const { error } = await client.from("videos").delete().eq("id", v.id);
+      if (error) { alert(`삭제 실패: ${error.message}`); b.disabled = false; return; }
+      loadMine();
+    }));
+  }
+
+  function show(session) {
+    $("loginPanel").classList.toggle("hidden", !!session);
+    $("uploadPanel").classList.toggle("hidden", !session);
+    $("listPanel").classList.toggle("hidden", !session);
+    if (session) loadMine();
+  }
+}
+
+// 영상의 한 장면을 캡처해서 썸네일(JPG)로 만들기
+function snapshot(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.muted = true; v.playsInline = true; v.preload = "auto"; v.src = url;
+    const fail = () => { URL.revokeObjectURL(url); reject(new Error("snapshot")); };
+    const timer = setTimeout(fail, 15000);
+    v.onerror = fail;
+    v.onloadedmetadata = () => { v.currentTime = Math.min(1.5, (v.duration || 2) / 3); };
+    v.onseeked = () => {
+      clearTimeout(timer);
+      const w = 1280, h = 720, c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#000"; ctx.fillRect(0, 0, w, h);
+      const r = Math.min(w / v.videoWidth, h / v.videoHeight);
+      const dw = v.videoWidth * r, dh = v.videoHeight * r;
+      ctx.drawImage(v, (w - dw) / 2, (h - dh) / 2, dw, dh);
+      c.toBlob((blob) => { URL.revokeObjectURL(url); blob ? resolve({ blob, duration: v.duration }) : reject(new Error("snapshot")); }, "image/jpeg", 0.85);
+    };
+  });
+}
+
+// 진행률(%)을 보여주며 Supabase 저장소에 파일 올리기
+function putFile(path, blob, token, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const safe = path.split("/").map(encodeURIComponent).join("/");
+    xhr.open("POST", `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${safe}`);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.setRequestHeader("apikey", SUPABASE_ANON_KEY);
+    xhr.setRequestHeader("Content-Type", blob.type || "application/octet-stream");
+    xhr.setRequestHeader("cache-control", "max-age=31536000");
+    if (onProgress) xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve();
+      let m = xhr.responseText;
+      try { m = JSON.parse(m).message || m; } catch {}
+      if (xhr.status === 413) m = "파일이 너무 커요. Supabase 저장소 용량 제한을 확인하세요.";
+      reject(new Error(m || `HTTP ${xhr.status}`));
+    };
+    xhr.onerror = () => reject(new Error("인터넷 연결을 확인하세요."));
+    xhr.send(blob);
+  });
+}
+</script>
+</body>
+</html>
